@@ -2,14 +2,21 @@ import React, { useEffect, useState } from "react";
 import { LogBox } from "react-native";
 import * as Font from "expo-font";
 import AppLoading from "expo-app-loading";
+import Toast from "react-native-toast-message";
 import { NavigationContainer } from "@react-navigation/native";
 
 import AuthNavigator from "./app/navigation/AuthNavigator";
+import OfflineNotice from "./app/components/OfflineNotice";
+import authStorage from "./app/auth/storage";
+import AuthContext from "./app/auth/context";
+import Home from "./app/screens/home";
 
 LogBox.ignoreLogs(["Remote debugger"]);
 
 export default function App() {
   const [fontLoaded, setFontLoaded] = useState(false);
+  const [user, setUser] = useState();
+  const [isReady, setIsReady] = useState(false);
 
   const loadAssetsAsync = async () => {
     await Font.loadAsync({
@@ -25,15 +32,27 @@ export default function App() {
     setFontLoaded(true);
   };
 
+  const restoreUser = async () => {
+    const user = await authStorage.getUser();
+    if (user) setUser(user);
+  };
+
   useEffect(() => {
     loadAssetsAsync();
+    restoreUser();
+    setIsReady(true);
   }, []);
 
   if (!fontLoaded) return <AppLoading />;
+  if (!isReady) return <AppLoading />;
 
   return (
-    <NavigationContainer>
-      <AuthNavigator />
-    </NavigationContainer>
+    <AuthContext.Provider value={{ user, setUser }}>
+      <OfflineNotice />
+      <NavigationContainer>
+        {user ? <Home /> : <AuthNavigator />}
+        <Toast />
+      </NavigationContainer>
+    </AuthContext.Provider>
   );
 }

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   StyleSheet,
   View,
@@ -15,6 +15,9 @@ import LoginHeadSVG from "../assets/Illustrations/LoginHead";
 import LoginSVG from "../assets/Illustrations/Login";
 import AppTextInput from "../components/TextInput";
 import AppButton from "../components/Button";
+import { login } from "../api/auth";
+import useAuth from "../auth/useAuth";
+import { showErrorToast, showSuccessToast } from "../components/Toast";
 
 import routes from "../navigation/routes";
 
@@ -28,6 +31,25 @@ const validationSchema = Yup.object().shape({
 });
 
 const LoginScreen = ({ navigation }) => {
+  const auth = useAuth();
+  const [loading, setLoading] = useState(false);
+
+  const loginApi = async (Username, Password) => {
+    try {
+      showSuccessToast("Logging in...");
+      setLoading(true);
+      const { data } = await login(Username, Password);
+      setLoading(false);
+      if (!data && !data.status)
+        showErrorToast("Something went wrong. Please try again later");
+      else if (data.status === "FAILED") showErrorToast(data.message);
+      else showSuccessToast("Login Successful!");
+      if (data.idToken) auth.logIn(data.idToken);
+    } catch (ex) {
+      showErrorToast(ex.message);
+    }
+  };
+
   return (
     <Screen>
       <ScrollView style={{ backgroundColor: "white" }}>
@@ -35,13 +57,14 @@ const LoginScreen = ({ navigation }) => {
         <View style={styles.container}>
           <Formik
             initialValues={{ username: "", password: "" }}
-            onSubmit={(e) => {
-              Alert.alert("You provided", JSON.stringify(e, null, 4));
-            }}
+            onSubmit={(e) => loginApi(e.username, e.password)}
             validationSchema={validationSchema}
           >
             {({ handleChange, handleBlur, handleSubmit, values, errors }) => (
               <View style={styles.form}>
+                {loading && (
+                  <AppText style={styles.apiStatus}>Logging in...</AppText>
+                )}
                 <AppText style={styles.h3}>
                   Log in to your account to have fun!
                 </AppText>
@@ -95,6 +118,13 @@ const LoginScreen = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
+  apiStatus: {
+    fontFamily: "MerriweatherRegular",
+    fontSize: 12,
+    textAlign: "center",
+    color: "green",
+    marginBottom: 15,
+  },
   container: {
     alignItems: "center",
   },

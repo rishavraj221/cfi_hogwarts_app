@@ -15,6 +15,9 @@ import LoginHeadSVG from "../assets/Illustrations/LoginHead";
 import SignUpSVG from "../assets/Illustrations/SignUp";
 import AppTextInput from "../components/TextInput";
 import AppButton from "../components/Button";
+import { signup, confirmEmail } from "../api/auth";
+import useAuth from "../auth/useAuth";
+import { showErrorToast, showSuccessToast } from "../components/Toast";
 
 import routes from "../navigation/routes";
 
@@ -63,7 +66,43 @@ const validationSchema = Yup.object().shape({
 
 const SignupScreen = ({ navigation }) => {
   const [otpSent, setOTPSent] = useState(false);
+  const [username, setUsername] = useState(null);
   const [email, setEmail] = useState(null);
+  const [password, setPassword] = useState(null);
+  const auth = useAuth();
+  const [loading, setLoading] = useState(false);
+
+  const confirmEmailApi = async (Username, Password, verificationCode) => {
+    try {
+      showSuccessToast("Verifying code...");
+      setLoading(true);
+      const { data } = await confirmEmail(Username, Password, verificationCode);
+      setLoading(false);
+      if (!data && !data.status)
+        showErrorToast("Something went wrong. Please try again later");
+      else if (data.status === "FAILED") showErrorToast(data.message);
+      else showSuccessToast("Signup Successful!");
+      if (data.idToken) auth.logIn(data.idToken);
+    } catch (ex) {
+      showErrorToast(ex.message);
+    }
+  };
+
+  const signupApi = async (Username, Email, Password) => {
+    try {
+      showSuccessToast("Verifying code...");
+      setLoading(true);
+      const { data } = await signup(Username, Email, Password);
+      setLoading(false);
+      setOTPSent(true);
+      if (!data && !data.status)
+        showErrorToast("Something went wrong. Please try again later");
+      else if (data.status === "FAILED") showErrorToast(data.message);
+      else showSuccessToast("Verification Code Sent...");
+    } catch (ex) {
+      showErrorToast(ex.message);
+    }
+  };
 
   return (
     <Screen>
@@ -73,13 +112,18 @@ const SignupScreen = ({ navigation }) => {
           {otpSent ? (
             <Formik
               initialValues={{ verificationCode: "" }}
-              onSubmit={(e) => {
-                Alert.alert("You provided", JSON.stringify(e, null, 4));
-              }}
+              onSubmit={(e) =>
+                confirmEmailApi(username, password, e.verificationCode)
+              }
               validationSchema={otpValidationSchema}
             >
               {({ handleChange, handleBlur, handleSubmit, values, errors }) => (
                 <View style={styles.form}>
+                  {loading && (
+                    <AppText style={styles.apiStatus}>
+                      Verifying code ...
+                    </AppText>
+                  )}
                   <AppText style={styles.h3}>
                     Enter 6 digit verification code sent to{" "}
                     <AppText style={styles.h3Bold}>{email}</AppText>
@@ -111,13 +155,20 @@ const SignupScreen = ({ navigation }) => {
                 reenterPassword: "",
               }}
               onSubmit={(e) => {
+                setUsername(e.username);
                 setEmail(e.email);
-                setOTPSent(true);
+                setPassword(e.password);
+                signupApi(e.username, e.email, e.password);
               }}
               validationSchema={validationSchema}
             >
               {({ handleChange, handleBlur, handleSubmit, values, errors }) => (
                 <View style={styles.form}>
+                  {loading && (
+                    <AppText style={styles.apiStatus}>
+                      Sending code to your mail ...
+                    </AppText>
+                  )}
                   <AppText style={styles.h3}>Sign up! It's free :)</AppText>
                   <AppTextInput
                     onChangeText={handleChange("username")}
@@ -195,6 +246,13 @@ const SignupScreen = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
+  apiStatus: {
+    fontFamily: "MerriweatherRegular",
+    fontSize: 12,
+    textAlign: "center",
+    color: "green",
+    marginBottom: 15,
+  },
   container: {
     alignItems: "center",
   },
