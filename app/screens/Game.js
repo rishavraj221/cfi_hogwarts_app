@@ -3,46 +3,21 @@ import {
   StyleSheet,
   View,
   TouchableOpacity,
+  TextInput,
   Alert,
-  ScrollView,
 } from "react-native";
 
+import Icon from "../assets/Icons";
+import PlayingChessIllus from "../assets/Illustrations/PlayingChess";
+import NotFoundIllus from "../assets/Illustrations/NotFound";
 import AppText from "../components/Text";
-import Button from "../components/Button";
 import Screen from "../components/Screen";
 import useAuth from "../auth/useAuth";
-import Icon from "../assets/Icons";
 
-const gameStats = [
-  {
-    statName: "Games Played",
-    count: 56,
-    iconName: "gamesPlayed",
-  },
-  {
-    statName: "Games Won",
-    count: 42,
-    iconName: "gamesWon",
-  },
-  {
-    statName: "Games Lost",
-    count: 9,
-    iconName: "gamesLost",
-  },
-  {
-    statName: "Stalemate Games",
-    count: 5,
-    iconName: "gamesTie",
-  },
-];
-
-const HomeScreen = ({ boardConnection }) => {
+const GameScreen = ({ boardConnection }) => {
   const auth = useAuth();
-
-  const prependZero = (number) => {
-    if (number < 10) return "0" + number;
-    return number;
-  };
+  const [searchText, setSearchText] = useState("");
+  const [notExist, setNotExist] = useState(false);
 
   return (
     <Screen style={{ backgroundColor: "#F7F8FA" }}>
@@ -67,18 +42,22 @@ const HomeScreen = ({ boardConnection }) => {
           </AppText>
         </TouchableOpacity>
       </View>
-      <AppText style={styles.headTxt}>Your Stats</AppText>
-      <ScrollView>
-        {gameStats.map((g, index) => (
-          <View key={index} style={styles.statBox}>
-            <View style={styles.statBoxLeftContent}>
-              <AppText style={styles.statBoxTitle}>{g.statName}</AppText>
-              <AppText style={styles.statCount}>{prependZero(g.count)}</AppText>
-            </View>
-            <Icon name={g.iconName} style={styles.statIcon} />
-          </View>
-        ))}
-      </ScrollView>
+      <TextInput
+        style={styles.searchTextInput}
+        onChangeText={(e) => {
+          setSearchText(e);
+          setNotExist(e ? true : false);
+        }}
+        placeholder="Enter username of your opponent"
+      />
+      <View style={styles.midIllus}>
+        {notExist ? <NotFoundIllus /> : <PlayingChessIllus />}
+        <AppText style={styles.illusTxt}>
+          {notExist
+            ? "The Person you are looking for does not exist"
+            : "Search for your opponent and start playing"}
+        </AppText>
+      </View>
     </Screen>
   );
 };
@@ -112,19 +91,16 @@ const styles = StyleSheet.create({
     fontFamily: "MerriweatherRegular",
     fontSize: 11,
   },
-  headTxt: {
-    padding: 20,
-    paddingTop: 30,
-    fontFamily: "RobotoMedium",
-    fontSize: 14,
-    color: "#767676",
-  },
-  statBox: {
-    width: "80%",
-    height: 120,
+  searchTextInput: {
     backgroundColor: "white",
     alignSelf: "center",
-    borderRadius: 10,
+    width: "90%",
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 25,
+    color: "#707070",
+    fontSize: 12,
+    fontFamily: "RobotoRegular",
     shadowColor: "#000",
     shadowOffset: {
       width: 10,
@@ -133,33 +109,23 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.5,
     shadowRadius: 10,
     elevation: 2,
-    marginVertical: 10,
-    flexDirection: "row",
+    marginTop: 20,
   },
-  statBoxLeftContent: {
-    width: "65%",
-    height: 120,
-  },
-  statBoxTitle: {
-    margin: 20,
-    marginBottom: 5,
-    fontFamily: "RobotoRegular",
-    fontSize: 14,
-    color: "#7D7B7B",
-  },
-  statCount: {
-    fontFamily: "MerriweatherLight",
-    fontSize: 36,
-    textAlign: "center",
-    marginLeft: 50,
-    color: "#949494",
-  },
-  statIcon: {
-    width: "35%",
-    height: 120,
+  midIllus: {
+    position: "absolute",
+    top: "40%",
+    left: "30%",
     alignItems: "center",
-    justifyContent: "center",
+  },
+  illusTxt: {
+    color: "#767676",
+    fontFamily: "MerriweatherRegular",
+    fontSize: 12,
+    lineHeight: 18,
+    width: 160,
+    textAlign: "center",
+    marginTop: 15,
   },
 });
 
-export default HomeScreen;
+export default GameScreen;
