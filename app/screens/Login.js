@@ -8,6 +8,7 @@ import {
 } from "react-native";
 import * as Yup from "yup";
 import { Formik, ErrorMessage } from "formik";
+import { Auth } from "aws-amplify";
 
 import AppText from "../components/Text";
 import Screen from "../components/Screen";
@@ -38,15 +39,22 @@ const LoginScreen = ({ navigation }) => {
     try {
       showSuccessToast("Logging in...");
       setLoading(true);
-      const { data } = await login(Username, Password);
+      const user = await Auth.signIn(Username, Password);
       setLoading(false);
-      if (!data && !data.status)
-        showErrorToast("Something went wrong. Please try again later");
-      else if (data.status === "FAILED") showErrorToast(data.message);
+
+      if (!user) showErrorToast("Something went wrong. Please try again later");
       else showSuccessToast("Login Successful!");
-      if (data.idToken) auth.logIn(data.idToken);
-    } catch (ex) {
-      showErrorToast(ex.message);
+
+      console.log(JSON.stringify(user, null, 4));
+
+      auth.logIn(user.signInUserSession.idToken.jwtToken);
+
+      const result = await Auth.rememberDevice();
+      // console.log(result);
+    } catch (error) {
+      showErrorToast("error signing in");
+      setLoading(false);
+      console.log(error);
     }
   };
 
@@ -105,6 +113,13 @@ const LoginScreen = ({ navigation }) => {
               onPress={() => navigation.navigate(routes.SIGNUP)}
             >
               <AppText style={styles.h3Bold}>Sign Up</AppText>
+            </TouchableOpacity>
+          </View>
+          <View style={styles.signupTextCont}>
+            <TouchableOpacity
+              onPress={() => navigation.navigate(routes.FORGOT_PASS)}
+            >
+              <AppText style={styles.h3Bold}>Forgot Password</AppText>
             </TouchableOpacity>
           </View>
           <LoginSVG style={styles.loginSVG} />

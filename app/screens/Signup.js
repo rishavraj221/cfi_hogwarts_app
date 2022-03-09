@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   StyleSheet,
   View,
@@ -8,6 +8,7 @@ import {
 } from "react-native";
 import * as Yup from "yup";
 import { Formik, ErrorMessage } from "formik";
+import { Auth } from "aws-amplify";
 
 import AppText from "../components/Text";
 import Screen from "../components/Screen";
@@ -15,7 +16,8 @@ import LoginHeadSVG from "../assets/Illustrations/LoginHead";
 import SignUpSVG from "../assets/Illustrations/SignUp";
 import AppTextInput from "../components/TextInput";
 import AppButton from "../components/Button";
-import { signup, confirmEmail } from "../api/auth";
+import useInterval from "../hooks/useInterval";
+import { createDynamoUser } from "../api/dynamo";
 import useAuth from "../auth/useAuth";
 import { showErrorToast, showSuccessToast } from "../components/Toast";
 
@@ -24,6 +26,8 @@ import routes from "../navigation/routes";
 const otpValidationSchema = Yup.object().shape({
   verificationCode: Yup.string().matches("\\d{6}", "Please enter a valid code"),
 });
+
+const RESEND_CODE_TIME = 20;
 
 const validationSchema = Yup.object().shape({
   username: Yup.string()
@@ -72,36 +76,93 @@ const SignupScreen = ({ navigation }) => {
   const auth = useAuth();
   const [loading, setLoading] = useState(false);
 
-  const confirmEmailApi = async (Username, Password, verificationCode) => {
+  const [resendCodeBool, setResendCodeBool] = useState(true);
+  const [resendCodeTimer, setResendCodeTimer] = useState(RESEND_CODE_TIME);
+
+  useInterval(() => {
+    if (resendCodeTimer > 0) setResendCodeTimer(resendCodeTimer - 1);
+  }, 1000);
+
+  const confirmEmailApi = async (Username, verificationCode) => {
     try {
       showSuccessToast("Verifying code...");
       setLoading(true);
-      const { data } = await confirmEmail(Username, Password, verificationCode);
+      const result = await Auth.confirmSignUp(Username, verificationCode);
       setLoading(false);
-      if (!data && !data.status)
+
+      if (result !== "SUCCESS")
         showErrorToast("Something went wrong. Please try again later");
-      else if (data.status === "FAILED") showErrorToast(data.message);
-      else showSuccessToast("Signup Successful!");
-      if (data.idToken) auth.logIn(data.idToken);
-    } catch (ex) {
-      showErrorToast(ex.message);
+      else {
+        showSuccessToast("Signup Successful, Logging in...");
+        // navigation.navigate(routes.LOGIN);
+        setLoading(true);
+        const user = await Auth.signIn(Username, password);
+        setLoading(false);
+
+        if (!user)
+          showErrorToast("Something went wrong. Please try again later");
+        else showSuccessToast("Login Successful!");
+
+        const dynamo_create = await createDynamoUser(Username);
+        // console.log(dynamo_create);
+
+        // console.log(JSON.stringify(user, null, 4));
+
+        auth.logIn(user.signInUserSession.idToken.jwtToken);
+      }
+    } catch (error) {
+      showErrorToast("error confirming sign up");
+      setLoading(false);
+      console.log(error);
     }
   };
 
   const signupApi = async (Username, Email, Password) => {
     try {
-      showSuccessToast("Verifying code...");
+      showSuccessToast("Sending code...");
       setLoading(true);
-      const { data } = await signup(Username, Email, Password);
+      const { user } = await Auth.signUp({
+        username: Username,
+        password: Password,
+        attributes: {
+          email: Email,
+        },
+      });
       setLoading(false);
       setOTPSent(true);
-      if (!data && !data.status)
-        showErrorToast("Something went wrong. Please try again later");
-      else if (data.status === "FAILED") showErrorToast(data.message);
+      setResendCodeTimer(20);
+      if (!user) showErrorToast("Something went wrong. Please try again later");
       else showSuccessToast("Verification Code Sent...");
-    } catch (ex) {
-      showErrorToast(ex.message);
+    } catch (error) {
+      showErrorToast("error signing up:", error);
+      setLoading(false);
+      console.log(error);
     }
+  };
+
+  const resendVerificationCode = async (Username) => {
+    try {
+      showSuccessToast("Sending code...");
+      setLoading(true);
+      const result = await Auth.resendSignUp(Username);
+      setLoading(false);
+
+      if (!result.CodeDeliveryDetails) showErrorToast("Something went wrong");
+      else showSuccessToast("Code sent successfully");
+      // console.log(result);
+    } catch (err) {
+      showErrorToast("error resending code");
+      setLoading(false);
+      console.log(err);
+    }
+  };
+
+  const handleResendCode = () => {
+    if (resendCodeTimer === 0) {
+      resendVerificationCode(username);
+      setResendCodeTimer(20);
+    }
+    return;
   };
 
   return (
@@ -112,9 +173,7 @@ const SignupScreen = ({ navigation }) => {
           {otpSent ? (
             <Formik
               initialValues={{ verificationCode: "" }}
-              onSubmit={(e) =>
-                confirmEmailApi(username, password, e.verificationCode)
-              }
+              onSubmit={(e) => confirmEmailApi(username, e.verificationCode)}
               validationSchema={otpValidationSchema}
             >
               {({ handleChange, handleBlur, handleSubmit, values, errors }) => (
@@ -126,7 +185,9 @@ const SignupScreen = ({ navigation }) => {
                   )}
                   <AppText style={styles.h3}>
                     Enter 6 digit verification code sent to{" "}
-                    <AppText style={styles.h3Bold}>{email}</AppText>
+                    <AppText style={styles.h3Bold}>
+                      {email.toLowerCase()}
+                    </AppText>
                   </AppText>
                   <AppTextInput
                     onChangeText={handleChange("verificationCode")}
@@ -143,6 +204,25 @@ const SignupScreen = ({ navigation }) => {
                     </AppText>
                   )}
                   <AppButton title="Verify" onPress={handleSubmit} />
+                  <View style={styles.signupTextCont}>
+                    <AppText style={styles.h3}>
+                      Didn't receive the code yet?{" "}
+                    </AppText>
+                    <TouchableOpacity onPress={handleResendCode}>
+                      <AppText
+                        style={[
+                          styles.h3Bold,
+                          {
+                            color:
+                              resendCodeTimer === 0 ? "#352b2b" : "#767676",
+                          },
+                        ]}
+                      >
+                        Resend{" "}
+                        {resendCodeTimer === 0 ? "" : `(${resendCodeTimer})`}
+                      </AppText>
+                    </TouchableOpacity>
+                  </View>
                 </View>
               )}
             </Formik>

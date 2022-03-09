@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   StyleSheet,
   View,
@@ -12,37 +12,58 @@ import Button from "../components/Button";
 import Screen from "../components/Screen";
 import useAuth from "../auth/useAuth";
 import Icon from "../assets/Icons";
-
-const gameStats = [
-  {
-    statName: "Games Played",
-    count: 56,
-    iconName: "gamesPlayed",
-  },
-  {
-    statName: "Games Won",
-    count: 42,
-    iconName: "gamesWon",
-  },
-  {
-    statName: "Games Lost",
-    count: 9,
-    iconName: "gamesLost",
-  },
-  {
-    statName: "Stalemate Games",
-    count: 5,
-    iconName: "gamesTie",
-  },
-];
+import { getUserFromDB } from "../hooks/getDynamoUser";
+import { showErrorToast } from "../components/Toast";
 
 const HomeScreen = ({ boardConnection }) => {
   const auth = useAuth();
+  const [loading, setLoading] = useState(false);
+  const [dynamoUser, setDynamoUser] = useState(null);
+  const [gameStats, setGameStats] = useState([
+    {
+      statName: "Games Played",
+      count: 0,
+      iconName: "gamesPlayed",
+    },
+    {
+      statName: "Games Won",
+      count: 0,
+      iconName: "gamesWon",
+    },
+    {
+      statName: "Games Lost",
+      count: 0,
+      iconName: "gamesLost",
+    },
+    {
+      statName: "Stalemate Games",
+      count: 0,
+      iconName: "gamesTie",
+    },
+  ]);
 
   const prependZero = (number) => {
     if (number < 10) return "0" + number;
     return number;
   };
+
+  const getUserFunc = async (username) => {
+    const data = await getUserFromDB(username, setLoading, showErrorToast);
+    // console.log(data);
+    setDynamoUser(data);
+
+    const gameStatsTemp = [...gameStats];
+    gameStatsTemp[0].count = data.game_stats.played;
+    gameStatsTemp[1].count = data.game_stats.won;
+    gameStatsTemp[2].count = data.game_stats.lose;
+    gameStatsTemp[3].count = data.game_stats.tie;
+
+    setGameStats(gameStatsTemp);
+  };
+
+  useEffect(() => {
+    getUserFunc(auth.user["cognito:username"]);
+  }, []);
 
   return (
     <Screen style={{ backgroundColor: "#F7F8FA" }}>
@@ -67,6 +88,7 @@ const HomeScreen = ({ boardConnection }) => {
           </AppText>
         </TouchableOpacity>
       </View>
+      {loading && <AppText style={styles.apiStatus}>Getting Stats...</AppText>}
       <AppText style={styles.headTxt}>Your Stats</AppText>
       <ScrollView>
         {gameStats.map((g, index) => (
@@ -84,6 +106,14 @@ const HomeScreen = ({ boardConnection }) => {
 };
 
 const styles = StyleSheet.create({
+  apiStatus: {
+    fontFamily: "MerriweatherRegular",
+    fontSize: 12,
+    textAlign: "center",
+    color: "green",
+    marginTop: 15,
+    marginBottom: 5,
+  },
   boardStatsCont: {
     flexDirection: "row",
     alignItems: "center",

@@ -1,0 +1,20 @@
+{
+  "dev": {
+    "awscloudformation": {
+      "AuthRoleName": "amplify-cfihogwartsapp-dev-113219-authRole",
+      "UnauthRoleArn": "arn:aws:iam::658869116565:role/amplify-cfihogwartsapp-dev-113219-unauthRole",
+      "AuthRoleArn": "arn:aws:iam::658869116565:role/amplify-cfihogwartsapp-dev-113219-authRole",
+      "Region": "us-west-2",
+      "DeploymentBucketName": "amplify-cfihogwartsapp-dev-113219-deployment",
+      "UnauthRoleName": "amplify-cfihogwartsapp-dev-113219-unauthRole",
+      "StackName": "amplify-cfihogwartsapp-dev-113219",
+      "StackId": "arn:aws:cloudformation:us-west-2:658869116565:stack/amplify-cfihogwartsapp-dev-113219/86dd6860-9149-11ec-938f-0249720761ab",
+      "AmplifyAppId": "d1rprncn9dplj3"
+    },
+    "categories": {
+      "auth": {
+        "cfihogwartsapp26b75c2d": {}
+      }
+    }
+  }
+}

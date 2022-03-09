@@ -1,5 +1,6 @@
 import React from "react";
 import { StyleSheet, View, TouchableOpacity, Alert } from "react-native";
+import { Auth } from "aws-amplify";
 
 import Icon from "../assets/Icons";
 import AppText from "../components/Text";
@@ -8,6 +9,15 @@ import useAuth from "../auth/useAuth";
 
 const ProfileScreen = () => {
   const auth = useAuth();
+
+  const logOut = async () => {
+    try {
+      await Auth.signOut();
+      auth.logOut();
+    } catch (error) {
+      console.log("error signing out: ", error);
+    }
+  };
 
   return (
     <Screen style={{ backgroundColor: "#f7f8fa" }}>
@@ -60,11 +70,7 @@ const ProfileScreen = () => {
         <Icon name="aboutus" />
         <AppText style={styles.btnTitle}>About Us</AppText>
       </TouchableOpacity>
-      <TouchableOpacity
-        activeOpacity={0.7}
-        style={styles.btn}
-        onPress={auth.logOut}
-      >
+      <TouchableOpacity activeOpacity={0.7} style={styles.btn} onPress={logOut}>
         <Icon name="logout" />
         <AppText style={styles.btnTitle}>Log out</AppText>
       </TouchableOpacity>
