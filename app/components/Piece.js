@@ -108,7 +108,7 @@ const Piece = ({ id, startPosition, chess, onTurn, enabled }) => {
       height: SIZE,
       zIndex: 0,
       backgroundColor: isGestureActive.value
-        ? "rgba(255, 255, 0, 0.5)"
+        ? "rgba(143, 255, 0, 0.5)"
         : "transparent",
       transform: [{ translateX: offsetX.value }, { translateY: offsetY.value }],
     };
