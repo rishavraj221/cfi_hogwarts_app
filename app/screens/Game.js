@@ -43,7 +43,7 @@ const BLACK = "#9B9B88";
 
 const Square = ({ row, col }) => {
   const offset = row % 2 === 0 ? 1 : 0;
-  const backgroundColor = (col + offset) % 2 === 0 ? WHITE : BLACK;
+  const backgroundColor = (col + offset) % 2 === 0 ? BLACK : WHITE;
   const color = (col + offset) % 2 === 0 ? BLACK : WHITE;
   return (
     <View

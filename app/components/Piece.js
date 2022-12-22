@@ -10,6 +10,7 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import { Vector } from "react-native-redash";
+import { sendMoveDetail } from "../api/communication";
 
 import { toTranslation, SIZE, toPosition } from "../hooks/notation";
 import Icon from "../assets/Icons";
@@ -49,6 +50,15 @@ export const PIECES = {
 //   enabled: boolean;
 // }
 
+const sendMoveDetailApi = async (move) => {
+  try {
+    const result = await sendMoveDetail(move);
+    console.log(result.data);
+  } catch (ex) {
+    console.log(ex);
+  }
+};
+
 const Piece = ({ id, startPosition, chess, onTurn, enabled }) => {
   const isGestureActive = useSharedValue(false);
   const offsetX = useSharedValue(0);
@@ -59,6 +69,7 @@ const Piece = ({ id, startPosition, chess, onTurn, enabled }) => {
     (to) => {
       const moves = chess.moves({ verbose: true });
       const from = toPosition({ x: offsetX.value, y: offsetY.value });
+
       const move = moves.find((m) => m.from === from && m.to === to);
       const { x, y } = toTranslation(move ? move.to : from);
       translateX.value = withTiming(
@@ -73,6 +84,8 @@ const Piece = ({ id, startPosition, chess, onTurn, enabled }) => {
       if (move) {
         chess.move({ from, to });
         onTurn();
+        console.log(from + "" + to);
+        sendMoveDetailApi(from + "" + to);
       }
     },
     [chess, isGestureActive, offsetX, offsetY, onTurn, translateX, translateY]
